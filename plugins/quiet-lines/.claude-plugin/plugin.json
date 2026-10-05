@@ -1,0 +1,15 @@
+{
+  "name": "quiet-lines",
+  "version": "1.0.0",
+  "description": "Tool summaries and turn-duration lines in faint italic, with the time each turn finished.",
+  "author": {
+    "name": "betoescobar46"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "ui",
+    "terminal"
+  ],
+  "types": "./types/index.d.ts"
+}

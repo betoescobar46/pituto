@@ -1,0 +1,40 @@
+{
+  "name": "session-bar",
+  "version": "1.0.0",
+  "description": "A bar under the prompt with compact, clear, effort, model and a color per folder, plus a side chat for quick questions that don't interrupt the task.",
+  "author": {
+    "name": "betoescobar46"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "ui",
+    "terminal"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of the panel, the bar and the notes the model receives. auto follows the `language` setting of Claude Code, or your system locale: Spanish stays Spanish, anything else is English.",
+      "default": "auto",
+      "options": [
+        "auto",
+        "en",
+        "es"
+      ]
+    },
+    "folderColors": {
+      "type": "string",
+      "title": "Folder colors",
+      "description": "Pin a color to each project: a comma-separated list of <text the path contains>=<color>, e.g. \"api=cyan, shop=purple, docs=orange\". Colors: red, green, blue, yellow, purple, orange, pink, cyan. Other folders get a stable color of their own, never one of the pinned ones.",
+      "default": ""
+    },
+    "persona": {
+      "type": "string",
+      "title": "Side chat persona",
+      "description": "One sentence added to the standalone side chat's instructions, e.g. \"The user is a cardiologist: answer clinical questions at specialist level.\"",
+      "default": ""
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "grid-tables",
+  "version": "1.0.0",
+  "description": "Markdown tables drawn as a grid that fits the terminal width, instead of collapsing into a vertical list.",
+  "author": {
+    "name": "betoescobar46"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "ui",
+    "terminal"
+  ]
+}

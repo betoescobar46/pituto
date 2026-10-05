@@ -1,0 +1,14 @@
+{
+  "name": "message-times",
+  "version": "1.0.0",
+  "description": "The time next to each of your messages.",
+  "author": {
+    "name": "betoescobar46"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "ui",
+    "terminal"
+  ]
+}

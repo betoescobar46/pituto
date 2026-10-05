@@ -1,0 +1,28 @@
+{
+  "name": "inline-replies",
+  "version": "1.0.0",
+  "description": "Answer Claude's questions and quote its paragraphs with a click: numbered questions with clickable options, a ❝ on every paragraph, and the full context sent along with your message.",
+  "author": {
+    "name": "betoescobar46"
+  },
+  "license": "MIT",
+  "keywords": [
+    "mod",
+    "ui",
+    "terminal"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Language of the labels, toasts and the notes Claude receives. auto follows the `language` setting of Claude Code, or your system locale: Spanish stays Spanish, anything else is English.",
+      "default": "auto",
+      "options": [
+        "auto",
+        "en",
+        "es"
+      ]
+    }
+  }
+}

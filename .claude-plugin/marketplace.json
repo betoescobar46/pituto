@@ -1,0 +1,12 @@
+{
+  "name": "pituto",
+  "owner": { "name": "betoescobar46" },
+  "metadata": { "description": "Five mods that take the friction out of Claude Code." },
+  "plugins": [
+    { "name": "inline-replies", "source": "./plugins/inline-replies", "description": "Answer Claude's questions and quote its paragraphs with a click" },
+    { "name": "session-bar", "source": "./plugins/session-bar", "description": "Compact, clear, effort, model, a color per folder and a side chat" },
+    { "name": "grid-tables", "source": "./plugins/grid-tables", "description": "Markdown tables as a grid at any width" },
+    { "name": "quiet-lines", "source": "./plugins/quiet-lines", "description": "Secondary lines in faint italic, with the time each turn finished" },
+    { "name": "message-times", "source": "./plugins/message-times", "description": "The time next to each of your messages" }
+  ]
+}
