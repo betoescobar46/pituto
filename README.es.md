@@ -29,7 +29,7 @@ Las preguntas quedan como enlaces donde aparecen. Clic en **①** abre tu línea
 
 **El silencio nunca autoriza algo irreversible.** Una pregunta sobre borrar, hacer push, enviar, pagar o sobrescribir nunca trae opción recomendada: se contesta explícitamente.
 
-![Las mismas preguntas numeradas con alternativas, y el prompt lleno a clics](img/questions-after.png)
+![Las preguntas numeradas, sus alternativas como teclas, y el prompt lleno a clics](img/questions-after.png)
 
 Todo queda en el prompt como texto. Lo editas y Enter.
 

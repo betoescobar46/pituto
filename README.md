@@ -29,7 +29,7 @@ Claude's questions become clickable where they appear. Click **①** to open you
 
 **Silence never authorizes anything irreversible.** A question about deleting, pushing, sending, paying or overwriting never gets a default: it needs an explicit answer.
 
-![The same questions numbered with clickable alternatives, and the prompt filled by clicks](img/questions-after.png)
+![Questions numbered, their alternatives as keys, and the prompt filled by clicks](img/questions-after.png)
 
 Everything lands in the prompt as plain text. Edit it, then Enter.
 
