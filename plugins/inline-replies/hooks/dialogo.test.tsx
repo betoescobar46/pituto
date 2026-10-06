@@ -56,9 +56,11 @@ test('las preguntas quedan en su lugar, numeradas y con sus alternativas; el cli
   expect(r.dibujados).toEqual(['Tercero, sin pregunta.'])
   const p0 = JSON.stringify(await ui.find({ key: 'pt0-p_0' }))
   expect(p0).toContain('[①  ¿Dormiste bien?](https://inline-replies.invalid/p/0)')
-  const p1 = JSON.stringify(await ui.find({ key: 'pt1-p_1-o_1_0-o_1_1' }))
-  expect(p1).toContain('[⟨Azul⟩](https://inline-replies.invalid/o/1/0)')
-  expect(p1).toContain('_(sin respuesta: Azul)_')
+  // Las alternativas, como teclas aparte; la recomendada con ★ y sin la nota "(sin respuesta…)".
+  const p1 = JSON.stringify(await ui.find({ key: 'pt1-p_1' }))
+  expect(p1).not.toContain('Azul')
+  expect(JSON.stringify(await ui.find({ key: 'tm1-0' }))).toContain('[★ Azul](https://inline-replies.invalid/o/1/0)')
+  expect(JSON.stringify(await ui.find({ key: 'tm1-1' }))).toContain('[Rojo](https://inline-replies.invalid/o/1/1)')
   expect(await ui.find({ key: 'q2' })).toBeDefined()
 
   // ❝ en un párrafo con pregunta cita el texto limpio, sin la marca.
@@ -76,13 +78,13 @@ test('las preguntas quedan en su lugar, numeradas y con sus alternativas; el cli
   expect(r.box).toBe('oye\n①  ')
   expect(r.toasts.at(-1)).toContain('ya está en el prompt')
   // Clic en una alternativa: su línea; otra alternativa la reemplaza.
-  await ui.press({ key: 'pt1-p_1-o_1_0-o_1_1', link: { href: 'https://inline-replies.invalid/o/1/1' } })
+  await ui.press({ key: 'tm1-1', link: { href: 'https://inline-replies.invalid/o/1/1' } })
   expect(r.box).toBe('oye\n①  \n②  Rojo')
-  await ui.press({ key: 'pt1-p_1-o_1_0-o_1_1', link: { href: 'https://inline-replies.invalid/o/1/0' } })
+  await ui.press({ key: 'tm1-0', link: { href: 'https://inline-replies.invalid/o/1/0' } })
   expect(r.box).toBe('oye\n①  \n②  Azul')
   // Lo escrito a mano no se pisa: la alternativa va al final.
   r.box = 'oye\n①  \n②  no sé,'
-  await ui.press({ key: 'pt1-p_1-o_1_0-o_1_1', link: { href: 'https://inline-replies.invalid/o/1/1' } })
+  await ui.press({ key: 'tm1-1', link: { href: 'https://inline-replies.invalid/o/1/1' } })
   expect(r.box).toBe('oye\n①  \n②  no sé, Rojo')
   r.box = 'oye\n①  \n②  Azul'
 
@@ -199,6 +201,6 @@ test('una viñeta que abre con la pregunta se quita: la pregunta ya trae su núm
   const t = 'Dos cosas:\n\n- ⟦¿Nombre? | *remove | rm⟧\n- ⟦¿Confirmar antes? | Sí | No⟧\n- una nota suelta'
   await turno($, t)
   const ui = await $.ui.mount({ plugin: 'inline-replies', surface: 'terminal', component: 'AssistantMessage', requestId: 'v1', props: { text: t, isFirstOfReply: true } })
-  const md = await ui.find({ key: 'pt1-p_0-o_0_0-o_0_1' })
+  const md = await ui.find({ key: 'pt1-p_0' })
   expect(md?.text?.startsWith('[①')).toBe(true)
 })

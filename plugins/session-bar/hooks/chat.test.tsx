@@ -472,3 +472,28 @@ test('con settings.language en inglés, el panel, la barra y los pedidos al mode
   expect(r.forks[0]).toContain('AGENT:')
   expect(r.forks[0]).toContain('Question: hello')
 })
+
+test('effort: la barra manda en cada pedido, y si el nivel nativo cambia (panel de /model) lo sigue', async ($, on) => {
+  motor(on)
+  const pedidos: string[] = []
+  // eslint-disable-next-line require-yield
+  on('turn.step', async function* (_$, e) {
+    pedidos.push(String(e.effort))
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: null, usage: null }
+  })
+  on('ui.render', { component: 'PromptHint' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>{e.props.hint}</Text>
+  })
+  const paso = async (effort: 'low' | 'medium' | 'xhigh') => {
+    const s = $.turn.step({ turnId: 't', index: 0, model: 'claude-opus-5-5[1m]', effort, messageCount: 1 })
+    for await (const _ of s) void _
+  }
+  await paso('medium')
+  const ui = await $.ui.mount({ plugin: 'session-bar', surface: 'terminal', component: 'PromptHint', props: { isDraft: false, isWorking: false, hint: 'h' } })
+  await ui.press({ key: 'effort-low' })
+  await paso('medium')
+  await paso('xhigh')
+  await paso('xhigh')
+  expect(pedidos).toEqual(['medium', 'low', 'xhigh', 'xhigh'])
+})

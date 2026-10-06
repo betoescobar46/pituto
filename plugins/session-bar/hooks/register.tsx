@@ -4,7 +4,7 @@ import type { EngineInterface, ModelForkResult, Register } from 'claude-code'
 import type { Mensaje, Modo } from '../types'
 import { PALETA, SIN_COLOR, carpeta, colorPorCarpeta, leerFijos, scriptAplicar, siguiente } from './color'
 import type { Fijo } from './color'
-import { LETRA, NIVELES, nivelDeArgs, nivelDeSettings } from './effort'
+import { LETRA, NIVELES, esNivel, nivelDeArgs, nivelDeSettings } from './effort'
 import type { Nivel } from './effort'
 import { motivoBloqueo } from './guardia'
 import { pistaCorta } from './pista'
@@ -482,9 +482,21 @@ export const register: Register = (on, opciones) => {
     })
   }
 
+  // El nivel nativo que traía el último pedido de la conversación principal.
+  let ultimoNativo: Nivel | undefined
   // Solo los pedidos de la conversación principal: un subagente conserva el effort que traiga.
   on('turn.step', async function* ($, e, next) {
     if (e.agentId !== undefined) return yield* next(e)
+    // El nivel nativo cambió desde el último pedido (←/→ en el panel de /model, u otra vía):
+    // manda ese, y la barra lo sigue.
+    if (esNivel(e.effort)) {
+      if (ultimoNativo !== undefined && e.effort !== ultimoNativo) {
+        void anotar($, `turn.step effort nativo ${ultimoNativo} → ${e.effort}: la barra lo sigue`)
+        await update($, esfuerzo, () => e.effort as Nivel)
+        await update($, esfuerzoSesion, () => null)
+      }
+      ultimoNativo = e.effort
+    }
     const n = e.effort !== undefined ? await read($, esfuerzoSesion) : null
     if (n !== null && n !== e.effort) void anotar($, `turn.step effort ${String(e.effort)} → ${n}`)
     const m = await read($, modeloSesion)

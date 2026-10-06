@@ -25,7 +25,7 @@ Claude lists four decisions. You re-read them and type an answer that points at 
 
 **With `inline-replies`**
 
-Claude's questions become clickable where they appear. Click **①** to open your answer line, or click an alternative and it's written for you. Add free text underneath. Unanswered questions take the option Claude recommended, shown in italics.
+Claude's questions become clickable where they appear. Click **①** to open your answer line, or click one of the alternatives, drawn as keys on their own line, and it's written for you. Add free text underneath. Unanswered questions take the option Claude recommended, marked with ★.
 
 **Silence never authorizes anything irreversible.** A question about deleting, pushing, sending, paying or overwriting never gets a default: it needs an explicit answer.
 
@@ -57,7 +57,7 @@ Remember the command, type it, pick it from a menu.
 
 **With `session-bar`**
 
-One button each, under the prompt. **C** compacts (second click confirms, and a percentage shows progress). **⌫** clears (second click confirms; there's no undo). **L M H XH Mx** sets the effort for this session only, without touching your defaults. The model name opens the model picker. **◧** opens a side chat for a quick question that doesn't interrupt the task.
+One button each, under the prompt. **C** compacts (second click confirms, and a percentage shows progress). **⌫** clears (second click confirms; there's no undo). **L M H XH Mx** sets the effort for this session only, without touching your defaults; changing it in `/model` moves the bar too. The model name opens the model picker. **◧** opens a side chat for a quick question that doesn't interrupt the task.
 
 ![The session bar with compact, clear, color, model and effort](img/bar-after.png)
 

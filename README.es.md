@@ -25,7 +25,7 @@ Claude enumera cuatro decisiones. Tú las relees y escribes una respuesta que ap
 
 **Con `inline-replies`**
 
-Las preguntas quedan como enlaces donde aparecen. Clic en **①** abre tu línea de respuesta; clic en una alternativa y queda escrita. Abajo agregas lo que quieras. Las preguntas sin responder toman la opción que Claude recomendó, en cursiva.
+Las preguntas quedan como enlaces donde aparecen. Clic en **①** abre tu línea de respuesta; clic en una alternativa, dibujada como tecla en su propia línea, y queda escrita. Abajo agregas lo que quieras. Las preguntas sin responder toman la opción que Claude recomendó, marcada con ★.
 
 **El silencio nunca autoriza algo irreversible.** Una pregunta sobre borrar, hacer push, enviar, pagar o sobrescribir nunca trae opción recomendada: se contesta explícitamente.
 
@@ -57,7 +57,7 @@ Acordarse del comando, escribirlo, elegirlo de un menú.
 
 **Con `session-bar`**
 
-Un botón para cada cosa, bajo el prompt. **C** compacta (el segundo clic confirma y un porcentaje muestra el avance). **⌫** limpia (segundo clic confirma; no tiene vuelta). **L M H XH Mx** fija el effort solo para esta sesión, sin tocar tus valores por defecto. El nombre del modelo abre el selector. **◧** abre un chat lateral para una pregunta suelta que no interrumpe la tarea.
+Un botón para cada cosa, bajo el prompt. **C** compacta (el segundo clic confirma y un porcentaje muestra el avance). **⌫** limpia (segundo clic confirma; no tiene vuelta). **L M H XH Mx** fija el effort solo para esta sesión, sin tocar tus valores por defecto; si lo cambias en `/model`, la barra lo sigue. El nombre del modelo abre el selector. **◧** abre un chat lateral para una pregunta suelta que no interrumpe la tarea.
 
 ![La barra con compactar, limpiar, color, modelo y effort](img/bar-after.png)
 

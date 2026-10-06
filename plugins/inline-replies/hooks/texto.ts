@@ -88,8 +88,17 @@ const escaparEnlace = (s: string) => s.replace(/([[\]])/g, '\\$1')
 // El texto como se dibuja: cada pregunta en su lugar, sin la marca. Las que esperan respuesta
 // llevan su número y son enlace, con sus alternativas como enlaces al lado ("⟨Ahora⟩") y la
 // recomendada anotada; las demás (ya respondidas) quedan como texto corriente.
-export function dibujarTexto(texto: string, pendientes: string[], idioma: Idioma = 'es'): { texto: string; enlaces: string[] } {
+// Con `aparte`, las alternativas no van en el texto: salen en `teclas`, para dibujarlas como
+// teclas en su propia línea bajo el párrafo, y la recomendada se marca con ★ en vez de la nota.
+export type Teclas = { i: number; opciones: string[]; defecto: number | undefined }
+export function dibujarTexto(
+  texto: string,
+  pendientes: string[],
+  idioma: Idioma = 'es',
+  aparte = false,
+): { texto: string; enlaces: string[]; teclas: Teclas[] } {
   const enlaces: string[] = []
+  const teclas: Teclas[] = []
   const t = textos(idioma)
   const una = (contenido: string) => {
     const p = normal(contenido)
@@ -99,6 +108,10 @@ export function dibujarTexto(texto: string, pendientes: string[], idioma: Idioma
     enlaces.push(enlacePregunta(i))
     // El círculo se dibuja más ancho que su celda y se come el espacio: van dos.
     const partes = [`[${NUMEROS[i]}  ${escaparEnlace(q.texto)}](${enlacePregunta(i)})`]
+    if (aparte) {
+      if (q.opciones.length > 0) teclas.push({ i, opciones: q.opciones, defecto: q.defecto })
+      return partes[0]!
+    }
     for (const [j, o] of q.opciones.entries()) {
       enlaces.push(enlaceOpcion(i, j))
       partes.push(`[⟨${escaparEnlace(o)}⟩](${enlaceOpcion(i, j)})`)
@@ -111,7 +124,7 @@ export function dibujarTexto(texto: string, pendientes: string[], idioma: Idioma
   const salida = texto
     .replace(MARCA, (m: string, c: string, i: number) => (codigo(i) ? m : una(c)))
     .replace(ABIERTA, (m: string, c: string, i: number) => (codigo(i) ? m : partirLinea(c).texto))
-  return { texto: salida, enlaces }
+  return { texto: salida, enlaces, teclas }
 }
 
 // Qué pregunta responde una línea del prompt, si alguna. Los dígitos solo valen si hay tantas

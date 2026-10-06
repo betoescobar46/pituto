@@ -12,6 +12,7 @@ import {
   contextoPreguntas,
   decoraciones,
   dibujarTexto,
+  enlaceOpcion,
   leerEnlace,
   leerRespuestas,
   limpiarSeleccion,
@@ -120,6 +121,10 @@ async function asegurar($: EngineInterface) {
 // nada, ni cambia las instrucciones de Claude.
 let conPantalla = true
 
+// Las teclas de las alternativas, del mismo gris que los botones de la barra de session-bar.
+const TECLA = '#363b44'
+const TECLA_REC = '#4a5263'
+
 export const register: Register = (on, opciones) => {
   opcionIdioma = opciones?.language
 
@@ -225,7 +230,7 @@ export const register: Register = (on, opciones) => {
       const id = `${e.requestId}:${i}`
       const citado = lista.some(c => c.id === id)
       const primero = e.props.isFirstOfReply && i === 0
-      const { texto, enlaces } = dibujarTexto(b.texto, pend, idioma)
+      const { texto, enlaces, teclas } = dibujarTexto(b.texto, pend, idioma, true)
       // Lo que se cita es el párrafo como se lee: sin las marcas ⟦ ⟧ ni las alternativas.
       const limpio = enlaces.length > 0 ? dibujarTexto(b.texto, []).texto : texto
       let dibujo
@@ -241,6 +246,26 @@ export const register: Register = (on, opciones) => {
             </Box>
             <Box flexDirection="column" flexGrow={1} flexShrink={1}>
               <Markdown key={clave} text={sinVineta} pressableLinks={enlaces} onLinkPress={l => void clic($, l.href)} />
+              {/* Las alternativas, como teclas grises en su propia línea bajo la pregunta; la
+                  recomendada con ★ y un gris más claro. */}
+              {teclas.map(q => (
+                <Box key={`t${q.i}`} flexDirection="row" flexWrap="wrap" marginLeft={3}>
+                  {q.opciones.map((o, j) => {
+                    const href = enlaceOpcion(q.i, j)
+                    const rec = j === q.defecto
+                    return (
+                      <Box key={`t${q.i}-${j}`} backgroundColor={rec ? TECLA_REC : TECLA} paddingX={1} marginRight={1}>
+                        <Markdown
+                          key={`tm${q.i}-${j}`}
+                          text={`[${rec ? '★ ' : ''}${o.replace(/([[\]])/g, '\\$1')}](${href})`}
+                          pressableLinks={[href]}
+                          onLinkPress={l => void clic($, l.href)}
+                        />
+                      </Box>
+                    )
+                  })}
+                </Box>
+              ))}
             </Box>
           </Box>
         )
