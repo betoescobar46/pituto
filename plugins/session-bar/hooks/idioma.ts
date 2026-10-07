@@ -27,6 +27,8 @@ export type Textos = {
   agenteTerminado: string
   respuestaEnPanel: string
   soloLectura: (motivo: string) => string
+  avisoCache: string
+  noCambio: string
   noCompacto: (motivo: string) => string
   compactada: (antes: string, despues: string) => string
   noPudoCompactar: (detalle: string, turno: boolean) => string
@@ -74,6 +76,8 @@ const ES: Textos = {
   agenteFallo: m => `(el agente falló: ${m})`,
   agenteTerminado: 'chat lateral: agente terminado',
   respuestaEnPanel: 'chat lateral: la respuesta quedó en el panel',
+  avisoCache: 'Si Claude Code pregunta «Switch model?», responde con el teclado (1 o Enter): el aviso queda justo donde estaba la barra y un clic ahí puede elegir «No».',
+  noCambio: 'No cambió: en el aviso de Claude Code quedó elegido «No, go back» (un clic sobre la fila del aviso lo elige).',
   soloLectura: m => `chat lateral: el agente es de solo lectura (${m}). Si hace falta, se pide en la sesión principal.`,
   noCompacto: m => `No se compactó: ${m}`,
   compactada: (a, d) => `Conversación compactada (${a} → ${d} tokens)`,
@@ -140,6 +144,8 @@ const EN: Textos = {
   agenteFallo: m => `(the agent failed: ${m})`,
   agenteTerminado: 'side chat: agent finished',
   respuestaEnPanel: 'side chat: the reply went to the panel',
+  avisoCache: 'If Claude Code asks “Switch model?”, answer with the keyboard (1 or Enter): the prompt sits right where the bar was, and a click there can pick “No”.',
+  noCambio: 'Not changed: Claude Code’s prompt ended on “No, go back” (a click on that row picks it).',
   soloLectura: m => `side chat: the agent is read-only (${m}). If needed, ask in the main session.`,
   noCompacto: m => `Not compacted: ${m}`,
   compactada: (a, d) => `Conversation compacted (${a} → ${d} tokens)`,

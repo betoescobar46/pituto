@@ -18,9 +18,9 @@ declare module 'claude-code' {
       borrar: 'listo' | 'confirmar' | 'borrando'
       colorSesion: number | null
       esfuerzo: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | null
-      esfuerzoSesion: 'low' | 'medium' | 'high' | 'xhigh' | 'max' | null
-      modeloSesion: 'claude-opus-5-5' | 'claude-sonnet-5-5' | 'claude-fable-5-1' | 'claude-haiku-4-5-20251001' | null
       menuModelo: boolean
+      modeloClic: string | null
+      fotoDefault: { ruta: string; claves: Record<string, unknown> } | null
       medida: { modelo: string; contexto: number | null; limite: number | null }
     }
   }

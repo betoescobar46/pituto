@@ -421,8 +421,16 @@ test('effort: el nivel elegido queda destacado y los demás siguen clicables', a
   expect((await ui.find({ key: 'effort-high' }))?.text).toBe('H')
 })
 
-test('modelo: el botón despliega los modelos y el elegido queda en la etiqueta', async ($, on) => {
+test('modelo: el botón despliega los modelos y el clic corre /model con el id, conservando [1m]', async ($, on) => {
   motor(on)
+  const comandos: string[] = []
+  let actual = 'claude-opus-5-5[1m]'
+  on('session.model', () => ({ value: actual }))
+  on('command.run', { command: 'model' }, async (_$, e) => {
+    comandos.push(e.args)
+    actual = e.args
+    return {}
+  })
   on('ui.render', { component: 'PromptHint' }, ($, e) => {
     const { Text } = $.ui.resolve(e)
     return <Text>{e.props.hint}</Text>
@@ -432,12 +440,15 @@ test('modelo: el botón despliega los modelos y el elegido queda en la etiqueta'
   expect(await ui.find({ key: 'modelo-claude-sonnet-5-5' })).toBeFalsy()
   await ui.press({ key: 'modelo' })
   expect((await ui.find({ key: 'modelo-claude-sonnet-5-5' }))?.text).toBe('S5.5')
+  // El actual no es botón.
+  expect(await ui.find({ type: 'Button', key: 'modelo-claude-opus-5-5' })).toBeFalsy()
   await ui.press({ key: 'modelo-claude-sonnet-5-5' })
+  expect(comandos).toEqual(['claude-sonnet-5-5[1m]'])
   expect(await ui.find({ key: 'modelo-claude-haiku-4-5-20251001' })).toBeFalsy()
-  expect((await ui.find({ key: 'modelo' }))?.text).toMatch(/^S5\.5/)
+  expect((await ui.find({ key: 'modelo' }))?.text).toMatch(/^S5\.5 1M/)
 })
 
-test('modelo: el elegido va en los pedidos de la sesión, no en los de subagentes', async ($, on) => {
+test('modelo: el mod ya no reescribe el modelo de los pedidos', async ($, on) => {
   motor(on)
   const pedidos: string[] = []
   // eslint-disable-next-line require-yield
@@ -445,21 +456,13 @@ test('modelo: el elegido va en los pedidos de la sesión, no en los de subagente
     pedidos.push(`${e.agentId ?? 'main'}:${e.model}`)
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: null, usage: null }
   })
-  on('ui.render', { component: 'PromptHint' }, ($, e) => {
-    const { Text } = $.ui.resolve(e)
-    return <Text>{e.props.hint}</Text>
-  })
   const paso = async (agentId?: string) => {
     const s = $.turn.step({ turnId: 't', index: 0, model: 'claude-opus-5-5[1m]', effort: 'high', messageCount: 1, ...(agentId ? { agentId } : {}) })
     for await (const _ of s) void _
   }
   await paso()
-  const ui = await $.ui.mount({ plugin: 'session-bar', surface: 'terminal', component: 'PromptHint', props: { isDraft: false, isWorking: false, hint: 'h' } })
-  await ui.press({ key: 'modelo' })
-  await ui.press({ key: 'modelo-claude-sonnet-5-5' })
-  await paso()
   await paso('ag-1')
-  expect(pedidos).toEqual(['main:claude-opus-5-5[1m]', 'main:claude-sonnet-5-5[1m]', 'ag-1:claude-opus-5-5[1m]'])
+  expect(pedidos).toEqual(['main:claude-opus-5-5[1m]', 'ag-1:claude-opus-5-5[1m]'])
 })
 
 test('con settings.language en inglés, el panel, la barra y los pedidos al modelo salen en inglés', async ($, on) => {
@@ -473,9 +476,14 @@ test('con settings.language en inglés, el panel, la barra y los pedidos al mode
   expect(r.forks[0]).toContain('Question: hello')
 })
 
-test('effort: la barra manda en cada pedido, y si el nivel nativo cambia (panel de /model) lo sigue', async ($, on) => {
+test('effort: el clic corre /effort y la barra sigue al nivel nativo de cada pedido', async ($, on) => {
   motor(on)
+  const comandos: string[] = []
   const pedidos: string[] = []
+  on('command.run', { command: 'effort' }, async (_$, e) => {
+    comandos.push(e.args)
+    return { text: `Set effort level to ${e.args} (saved as your default for new sessions): …` }
+  })
   // eslint-disable-next-line require-yield
   on('turn.step', async function* (_$, e) {
     pedidos.push(String(e.effort))
@@ -489,11 +497,41 @@ test('effort: la barra manda en cada pedido, y si el nivel nativo cambia (panel 
     const s = $.turn.step({ turnId: 't', index: 0, model: 'claude-opus-5-5[1m]', effort, messageCount: 1 })
     for await (const _ of s) void _
   }
+  // El nivel actual va como texto; los demás, como botones.
+  const actual = async (ui: { find: (q: { type?: string; key?: string }) => Promise<unknown> }) => {
+    for (const n of ['low', 'medium', 'high', 'xhigh', 'max']) if (!(await ui.find({ type: 'Button', key: `effort-${n}` }))) return n
+    return null
+  }
   await paso('medium')
   const ui = await $.ui.mount({ plugin: 'session-bar', surface: 'terminal', component: 'PromptHint', props: { isDraft: false, isWorking: false, hint: 'h' } })
+  expect(await actual(ui)).toBe('medium')
   await ui.press({ key: 'effort-low' })
-  await paso('medium')
+  expect(comandos).toEqual(['low'])
+  expect(await actual(ui)).toBe('low')
+  // El clic no reescribe los pedidos: el nivel lo pone Claude Code, ya cambiado por /effort.
+  await paso('low')
+  // ←/→ en el panel de /model: el pedido siguiente trae otro nivel y la barra lo sigue.
   await paso('xhigh')
-  await paso('xhigh')
-  expect(pedidos).toEqual(['medium', 'low', 'xhigh', 'xhigh'])
+  expect(pedidos).toEqual(['medium', 'low', 'xhigh'])
+  expect(await actual(ui)).toBe('xhigh')
+})
+
+test('effort: lo que dejan /model y /effort en su salida mueve la barra al instante', async ($, on) => {
+  motor(on)
+  const salidas: Record<string, string> = {
+    model: 'Set model to Opus 5.5 for this session only with high effort',
+    effort: 'Kept effort level as medium',
+  }
+  on('command.run', async (_$, e) => ({ text: salidas[e.command] }))
+  on('ui.render', { component: 'PromptHint' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>{e.props.hint}</Text>
+  })
+  const ui = await $.ui.mount({ plugin: 'session-bar', surface: 'terminal', component: 'PromptHint', props: { isDraft: false, isWorking: false, hint: 'h' } })
+  const como = { origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 120 } } as const
+  await $.command.run({ command: 'model', args: '', ...como })
+  expect(await ui.find({ type: 'Button', key: 'effort-high' })).toBeFalsy()
+  await $.command.run({ command: 'effort', args: 'xhigh', ...como })
+  expect(await ui.find({ type: 'Button', key: 'effort-medium' })).toBeFalsy()
+  expect(await ui.find({ type: 'Button', key: 'effort-high' })).toBeTruthy()
 })

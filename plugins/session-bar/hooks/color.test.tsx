@@ -50,7 +50,7 @@ function motor(on: On, cwd = '/Users/me/code/clinic') {
   on('session.start', async (_$, e) => ({ cwd: e.cwd }))
   on('agent.list', () => ({ value: [] }))
   on('ui.panes', () => ({ value: [] }))
-  on('command.register', async (_$, e) => ({ command: e.name }) as never)
+  on('command.register', async (_$, e) => ({ value: { command: e.name } }))
   on('ui.render', { component: 'PromptHint' }, ($, e) => {
     const { Text } = $.ui.resolve(e)
     return <Text>{e.props.hint}</Text>

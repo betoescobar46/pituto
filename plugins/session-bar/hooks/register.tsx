@@ -4,7 +4,7 @@ import type { EngineInterface, ModelForkResult, Register } from 'claude-code'
 import type { Mensaje, Modo } from '../types'
 import { PALETA, SIN_COLOR, carpeta, colorPorCarpeta, leerFijos, scriptAplicar, siguiente } from './color'
 import type { Fijo } from './color'
-import { LETRA, NIVELES, esNivel, nivelDeArgs, nivelDeSettings } from './effort'
+import { LETRA, NIVELES, esNivel, nivelDeArgs, nivelDeSalida, nivelDeSettings } from './effort'
 import type { Nivel } from './effort'
 import { motivoBloqueo } from './guardia'
 import { pistaCorta } from './pista'
@@ -13,7 +13,6 @@ import { MODELOS, mismoModelo, modeloPedido } from './modelo'
 import { RITMO_INICIAL, esperado, nuevoRitmo, porcentaje } from './avance'
 import { idiomaDe, textos } from './idioma'
 import type { Idioma } from './idioma'
-import type { Modelo } from './modelo'
 
 const PANE = 'session-bar'
 const VISIBLES = 6
@@ -36,17 +35,14 @@ const compactar = atom({ plugin: 'session-bar', key: 'compactar' } as const, 'li
 // Porcentaje estimado de la compactación en curso (sea del botón, de /compact o automática); null sin compactar.
 const avance = atom({ plugin: 'session-bar', key: 'avance' } as const, null as number | null)
 const borrar = atom({ plugin: 'session-bar', key: 'borrar' } as const, 'listo' as 'listo' | 'confirmar' | 'borrando')
-// Effort de esta sesión, o null mientras no se sepa (el botón dice "effort").
+// Effort de esta sesión según Claude Code, o null mientras no se sepa. Lo mueven el clic (vía
+// /effort), lo que escriben /effort y /model y el nivel que trae cada pedido.
 const esfuerzo = atom({ plugin: 'session-bar', key: 'esfuerzo' } as const, null as Nivel | null)
-// El nivel elegido en la barra: solo vale para esta sesión (turn.step lo pone en cada pedido). null = el de Claude Code.
-const esfuerzoSesion = atom({ plugin: 'session-bar', key: 'esfuerzoSesion' } as const, null as Nivel | null)
 // La barra de effort muestra solo el nivel actual hasta que se despliega.
-// Modelo elegido en el desplegable: solo vale para esta sesión (turn.step lo pone en cada pedido). null = el de Claude Code.
 // Cómo se enciende un botón de la barra bajo el mouse: así se distingue de los datos.
 // Fondo de tecla: marca en reposo lo que se puede clicar, sin corchetes.
 const TECLA = '#363b44'
 const ENCENDIDO = { color: 'cyanBright', bold: true, underline: true } as const
-const modeloSesion = atom({ plugin: 'session-bar', key: 'modeloSesion' } as const, null as Modelo | null)
 const menuModelo = atom({ plugin: 'session-bar', key: 'menuModelo' } as const, false)
 // Lo que antes mostraba la status line: modelo abreviado, % de contexto y % del límite de 5 h.
 const medida = atom({ plugin: 'session-bar', key: 'medida' } as const, { modelo: '', contexto: null, limite: null } as Medida)
@@ -73,6 +69,12 @@ const historial = (lista: Mensaje[]): string =>
     .slice(-VISIBLES)
     .map(m => `${m.quien === 'yo' ? t().usuario : t().tu}: ${m.texto}`)
     .join('\n')
+
+// Clics de effort cuyo /effort todavía no termina: mientras tanto los pedidos no mueven la barra.
+let clicEnCurso = 0
+// Modelo pedido con un clic cuyo /model todavía no deja su salida: la etiqueta lo muestra ya.
+// En $.state y no en una variable: sobrevive a una recarga del mod con el aviso de Claude Code abierto.
+const modeloClicAtom = atom({ plugin: 'session-bar', key: 'modeloClic' } as const, null as string | null)
 
 // Subagentes lanzados por el panel: los que todavía no responden y los ya respondidos.
 const enCurso = new Set<string>()
@@ -105,6 +107,48 @@ const anotar = ($: EngineInterface, texto: string): Promise<void> => {
   }).catch(() => undefined)
   return cola
 }
+
+// /model <id> y /effort <nivel> guardan lo elegido como default de las sesiones nuevas, y la
+// barra cambia solo esta sesión: así una sesión nueva que parta después (un agente en segundo
+// plano, un claude -p de un script) no hereda el clic. Justo antes de que corra el comando del
+// clic se anotan estas claves del settings.json del usuario; cuando el comando deja su salida
+// (ya guardó), se devuelven a como estaban.
+const CLAVES_DEFAULT = ['model', 'effortLevel', 'modelSettings'] as const
+type FotoDefault = { ruta: string; claves: Record<string, unknown> }
+// En $.state por lo mismo que modeloClic: el aviso "Switch model?" puede quedar abierto un rato.
+const fotoDefaultAtom = atom({ plugin: 'session-bar', key: 'fotoDefault' } as const, null as FotoDefault | null)
+
+async function fotografiarDefault($: EngineInterface): Promise<FotoDefault | null> {
+  const home = (await $.env.get('HOME').catch(() => undefined)) ?? ''
+  if (!home) return null
+  const ruta = `${home}/.claude/settings.json`
+  const s = JSON.parse(await $.fs.read(ruta).catch(() => '{}')) as Record<string, unknown>
+  return { ruta, claves: Object.fromEntries(CLAVES_DEFAULT.map(k => [k, s[k]])) }
+}
+
+// `reescribir`: escribe el archivo aunque ya esté como en la foto. Claude Code ignora un cambio
+// de settings.json que llegue antes de 5 s de su propia escritura (lo toma por suyo) y se queda
+// con lo que guardó en memoria: su próxima escritura (un /effort escrito a mano) devolvería al
+// archivo el modelo del clic. Reescribir pasados esos 5 s le hace releer el archivo.
+async function devolverDefault($: EngineInterface, explicita?: FotoDefault, reescribir = false): Promise<void> {
+  const foto = explicita ?? (await read($, fotoDefaultAtom))
+  if (explicita === undefined) await update($, fotoDefaultAtom, () => null)
+  if (foto === null) return
+  const s = JSON.parse(await $.fs.read(foto.ruta)) as Record<string, unknown>
+  const cambiadas = CLAVES_DEFAULT.filter(k => JSON.stringify(s[k]) !== JSON.stringify(foto.claves[k]))
+  if (cambiadas.length === 0) {
+    if (reescribir) await $.fs.write(foto.ruta, `${JSON.stringify(s, null, 2)}\n`)
+    return
+  }
+  for (const k of cambiadas) {
+    if (foto.claves[k] === undefined) delete s[k]
+    else s[k] = foto.claves[k]
+  }
+  await $.fs.write(foto.ruta, `${JSON.stringify(s, null, 2)}\n`)
+  void anotar($, `default devuelto: ${cambiadas.map(k => `${k}=${JSON.stringify(foto.claves[k])}`).join(' ')}`)
+}
+
+const delClic = (origen: { kind: string; name?: string }) => origen.kind === 'plugin' && origen.name === 'session-bar'
 
 async function agregar($: EngineInterface, quien: Mensaje['quien'], texto: string): Promise<void> {
   await update($, mensajes, l => [...l, { quien, texto }].slice(-40))
@@ -313,9 +357,7 @@ async function medir(
     pct = u.context.percent
     limites = u.rateLimits
   }
-  const base = await $.session.model()
-  const elegido = await read($, modeloSesion)
-  const modelo = modeloCorto(elegido === null ? base : modeloPedido(base, elegido))
+  const modelo = modeloCorto((await read($, modeloClicAtom)) ?? (await $.session.model()))
   const l = limites?.find(r => r.kind === 'five_hour')
   const m: Medida = {
     modelo,
@@ -348,9 +390,11 @@ export const register: Register = (on, opciones) => {
     } else {
       $.clock.after(0, () => void aplicarColor($, previo, false))
     }
-    // Effort: el default de settings al abrir; después lo mueven el botón y /effort.
+    // Effort: el default de settings al abrir; después lo mueven el botón, /effort, /model y los
+    // pedidos. Una recarga del mod conserva el que ya había (puede no ser el default).
     $.clock.after(0, () => {
       void (async () => {
+        if ((await read($, esfuerzo)) !== null) return
         const n = nivelDeSettings((await $.settings.read()) as Record<string, unknown>, await $.session.model())
         if (n !== null) await update($, esfuerzo, () => n)
       })().catch((err: unknown) => anotar($, `effort ${String(err)}`))
@@ -439,21 +483,35 @@ export const register: Register = (on, opciones) => {
     return { deny: t().soloLectura(motivo) }
   })
 
-  // /effort escrito a mano también mueve el botón, y desde ahí manda el nivel nativo.
+  // /effort, escrito o desde la barra: la barra queda en lo que Claude Code dice que dejó
+  // ("Kept effort level as …" si se canceló el aviso de caché).
   on('command.run', { command: 'effort' }, async ($, e, next) => {
+    const foto = delClic(e.origin) ? await fotografiarDefault($).catch(() => null) : null
+    if (foto !== null) await update($, fotoDefaultAtom, () => foto)
     const r = await next(e)
-    const n = nivelDeArgs(e.args)
-    if (n !== null) {
-      await update($, esfuerzo, () => n)
-      await update($, esfuerzoSesion, () => null)
-    }
+    // Respaldo, pasados los 5 s en que Claude Code ignora cambios ajenos al archivo: el default
+    // vuelve a como estaba aunque el comando no haya dejado salida o haya guardado tarde, y la
+    // reescritura le hace releerlo (ver devolverDefault).
+    if (foto !== null) $.clock.after(6500, () => void devolverDefault($, foto, true).catch(() => undefined))
+    const n = nivelDeSalida(r.text) ?? (r.text === undefined ? nivelDeArgs(e.args) : null)
+    void anotar($, `command.run effort ${JSON.stringify(e.args)} → ${JSON.stringify(r.text?.slice(0, 90))}`)
+    if (n !== null) await update($, esfuerzo, () => n)
     return r
   })
 
-  // /model escrito a mano manda: el desplegable vuelve a seguir al de Claude Code.
+  // /model, escrito o desde el desplegable. Lo que deja el panel (modelo y effort) llega después
+  // por session.append; aquí solo se relee por si el cambio ya ocurrió.
   on('command.run', { command: 'model' }, async ($, e, next) => {
+    const foto = delClic(e.origin) ? await fotografiarDefault($).catch(() => null) : null
+    if (foto !== null) await update($, fotoDefaultAtom, () => foto)
     const r = await next(e)
-    if (e.args.trim() !== '') await update($, modeloSesion, () => null)
+    // Respaldo, pasados los 5 s en que Claude Code ignora cambios ajenos al archivo: el default
+    // vuelve a como estaba aunque el comando no haya dejado salida o haya guardado tarde, y la
+    // reescritura le hace releerlo (ver devolverDefault).
+    if (foto !== null) $.clock.after(6500, () => void devolverDefault($, foto, true).catch(() => undefined))
+    void anotar($, `command.run model ${JSON.stringify(e.args)} → ${JSON.stringify(r.text?.slice(0, 90))}`)
+    const n = nivelDeSalida(r.text)
+    if (n !== null) await update($, esfuerzo, () => n)
     $.clock.after(0, () => void medir($).catch(() => undefined))
     return r
   })
@@ -463,46 +521,91 @@ export const register: Register = (on, opciones) => {
     return { element: e.element }
   })
 
+  // Desplegable de modelo: el clic corre /model <id>, igual que escribirlo, así que cambia el
+  // modelo de la sesión de verdad (el que muestra /model). Conserva la ventana de un millón.
   for (const m of MODELOS) {
     on('ui.press', { plugin: 'session-bar', element: `modelo-${m}` }, async ($, e) => {
-      await update($, modeloSesion, () => m)
+      const id = modeloPedido(await $.session.model().catch(() => ''), m)
+      if ((await $.session.turns().catch(() => 0)) > 0) $.ui.toast(t().avisoCache)
+      await update($, modeloClicAtom, () => id)
       await update($, menuModelo, () => false)
-      await medir($)
+      await medir($).catch(() => undefined)
+      void $.command.run({ command: 'model', args: id }).catch(async (err: unknown) => {
+        await anotar($, `model ${id}: ${String(err)}`)
+        await devolverDefault($).catch(() => undefined)
+        await update($, modeloClicAtom, () => null)
+        await medir($).catch(() => undefined)
+      })
       return { element: e.element }
     })
   }
 
-  // Barra de effort: el clic no pasa por /effort (que lo guarda como default de las sesiones
-  // nuevas); el nivel queda en esta sesión y se aplica pedido a pedido.
+  // Barra de effort: el clic corre /effort <nivel>, igual que escribirlo. Así cambia el nivel de
+  // la sesión de verdad (el que muestran /model y el indicador nativo) y no una copia del mod.
+  // Mientras el comando no termina, el nivel de los pedidos todavía es el anterior.
   for (const n of NIVELES) {
     on('ui.press', { plugin: 'session-bar', element: `effort-${n}` }, async ($, e) => {
       await update($, esfuerzo, () => n)
-      await update($, esfuerzoSesion, () => n)
+      clicEnCurso += 1
+      void $.command
+        .run({ command: 'effort', args: n })
+        .catch(async (err: unknown) => {
+          await anotar($, `effort ${n}: ${String(err)}`)
+          await devolverDefault($).catch(() => undefined)
+        })
+        .finally(() => (clicEnCurso -= 1))
       return { element: e.element }
     })
   }
 
-  // El nivel nativo que traía el último pedido de la conversación principal.
-  let ultimoNativo: Nivel | undefined
+  // command.run vuelve apenas se abre el panel de /model (o el de /effort sin nivel); lo elegido
+  // llega después, cuando la salida del comando entra a la conversación: "Set model to Opus 5.5
+  // for this session only with high effort". Ahí la barra lo toma, sin esperar otro pedido.
+  on('session.append', async ($, e, next) => {
+    if (e.agentId === undefined && (e.door === 'command' || e.door === 'notice')) {
+      const texto = e.message.content.map(b => (b.type === 'text' ? b.text : '')).join('\n')
+      // La salida del comando de un clic (sea cual sea: cambio, cancelación, consentimiento de
+      // Fable…): lo guardado vuelve a como estaba, la etiqueta deja el modelo pedido y la línea
+      // dice que fue solo para esta sesión.
+      const salida = /<local-command-std(?:out|err)>/.test(texto)
+      const foto = await read($, fotoDefaultAtom)
+      if (salida && (foto !== null || (await read($, modeloClicAtom)) !== null)) {
+        if (/^Kept (?:model|effort level) as/im.test(texto.replace(/<[^>]+>/g, ''))) $.ui.toast(t().noCambio)
+        await update($, modeloClicAtom, () => null)
+        await medir($).catch(() => undefined)
+      }
+      if (salida && foto !== null) {
+        await devolverDefault($).catch((err: unknown) => anotar($, `devolver default: ${String(err)}`))
+        if (/saved as your default for new sessions/.test(texto)) {
+          const solo = (t: string) =>
+            t.replace(' and saved as your default for new sessions', ' for this session only').replace('(saved as your default for new sessions)', '(this session only)')
+          e = { ...e, message: { ...e.message, content: e.message.content.map(b => (b.type === 'text' ? { ...b, text: solo(String(b.text)) } : b)) } }
+        }
+      }
+      const n = /effort/i.test(texto) ? nivelDeSalida(texto) : null
+      if (n !== null && n !== (await read($, esfuerzo))) {
+        void anotar($, `session.append ${e.door}/${e.message.name ?? '-'} effort ${n}: la barra lo sigue`)
+        await update($, esfuerzo, () => n)
+      }
+      // "Set model to …", "Model set to …", "Kept model as …": el modelo ya quedó (o se canceló).
+      if (/\b(?:set model to|model set to|kept model as)\b/i.test(texto)) {
+        void anotar($, `session.append ${e.door} modelo: ${texto.replace(/<[^>]+>/g, '').slice(0, 80)}`)
+        await medir($).catch(() => undefined)
+      }
+    }
+    return next(e)
+  })
+
   // Solo los pedidos de la conversación principal: un subagente conserva el effort que traiga.
   on('turn.step', async function* ($, e, next) {
     if (e.agentId !== undefined) return yield* next(e)
-    // El nivel nativo cambió desde el último pedido (←/→ en el panel de /model, u otra vía):
-    // manda ese, y la barra lo sigue.
-    if (esNivel(e.effort)) {
-      if (ultimoNativo !== undefined && e.effort !== ultimoNativo) {
-        void anotar($, `turn.step effort nativo ${ultimoNativo} → ${e.effort}: la barra lo sigue`)
-        await update($, esfuerzo, () => e.effort as Nivel)
-        await update($, esfuerzoSesion, () => null)
-      }
-      ultimoNativo = e.effort
+    // La barra sigue al nivel con que sale cada pedido: el de la sesión, como lo dejó /effort,
+    // el panel de /model o cualquier otra vía.
+    if (esNivel(e.effort) && clicEnCurso === 0 && e.effort !== (await read($, esfuerzo))) {
+      void anotar($, `turn.step effort nativo ${e.effort} (${e.model} #${e.index}): la barra lo sigue`)
+      await update($, esfuerzo, () => e.effort as Nivel)
     }
-    const n = e.effort !== undefined ? await read($, esfuerzoSesion) : null
-    if (n !== null && n !== e.effort) void anotar($, `turn.step effort ${String(e.effort)} → ${n}`)
-    const m = await read($, modeloSesion)
-    const model = m === null || mismoModelo(e.model, m) ? e.model : modeloPedido(e.model, m)
-    if (model !== e.model) void anotar($, `turn.step model ${e.model} → ${model}`)
-    return yield* next(n === null && model === e.model ? e : { ...e, ...(n === null ? {} : { effort: n }), model })
+    return yield* next(e)
   })
 
   on('ui.press', { plugin: 'session-bar', element: 'color' }, async ($, e) => {
@@ -644,9 +747,8 @@ export const register: Register = (on, opciones) => {
     const ef = await read($, esfuerzo)
     const med = await read($, medida)
     const menu = await read($, menuModelo)
-    const elegido = await read($, modeloSesion)
-    const base = elegido === null ? await $.session.model().catch(() => '') : ''
-    const etiquetaModelo = med.modelo || modeloCorto(base || (elegido ?? '')) || t().modelo
+    const base = (await read($, modeloClicAtom)) ?? (await $.session.model().catch(() => ''))
+    const etiquetaModelo = med.modelo || modeloCorto(base) || t().modelo
     const { value: conDialogo } = await $.state.get(citasDialogo)
 
     return (
@@ -722,7 +824,7 @@ export const register: Register = (on, opciones) => {
               {menu
                 ? MODELOS.map(m => (
                     <Box key={`modelo-${m}`} marginLeft={2}>
-                      {(elegido ?? '') === m || (elegido === null && mismoModelo(base, m)) ? (
+                      {mismoModelo(base, m) ? (
                         <Text color="cyanBright" bold>
                           {modeloCorto(m)}
                         </Text>

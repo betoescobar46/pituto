@@ -57,7 +57,7 @@ Acordarse del comando, escribirlo, elegirlo de un menú.
 
 **Con `session-bar`**
 
-Un botón para cada cosa, bajo el prompt. **C** compacta (el segundo clic confirma y un porcentaje muestra el avance). **⌫** limpia (segundo clic confirma; no tiene vuelta). **L M H XH Mx** fija el effort solo para esta sesión, sin tocar tus valores por defecto; si lo cambias en `/model`, la barra lo sigue. El nombre del modelo abre el selector. **◧** abre un chat lateral para una pregunta suelta que no interrumpe la tarea.
+Un botón para cada cosa, bajo el prompt. **C** compacta (el segundo clic confirma y un porcentaje muestra el avance). **⌫** limpia (segundo clic confirma; no tiene vuelta). **L M H XH Mx** fija el effort y el nombre del modelo abre el selector: ambos cambian el ajuste real de Claude Code solo para esta sesión (lo que muestra `/model`), sin tocar el default con que parten las sesiones nuevas. Si los cambias en `/model` o `/effort`, la barra los sigue. **◧** abre un chat lateral para una pregunta suelta que no interrumpe la tarea.
 
 ![La barra con compactar, limpiar, color, modelo y effort](img/bar-after.png)
 
