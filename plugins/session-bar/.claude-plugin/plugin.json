@@ -35,6 +35,16 @@
       "title": "Side chat persona",
       "description": "One sentence added to the standalone side chat's instructions, e.g. \"The user is a cardiologist: answer clinical questions at specialist level.\"",
       "default": ""
+    },
+    "keepDefaults": {
+      "type": "string",
+      "title": "Bar clicks: this session only",
+      "description": "Claude Code saves /effort and /model as the default for new sessions. \"on\": after each click on the bar, this mod puts back the previous default in ~/.claude/settings.json (keys model, effortLevel and modelSettings, right away and again 6.5 s later), so the click changes this session only. A change another session saves to those same keys in that window can be lost. \"off\" (default): a click saves the default just like typing the command, and the mod never writes settings.json.",
+      "default": "off",
+      "options": [
+        "off",
+        "on"
+      ]
     }
   }
 }

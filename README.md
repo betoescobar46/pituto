@@ -57,7 +57,7 @@ Remember the command, type it, pick it from a menu.
 
 **With `session-bar`**
 
-One button each, under the prompt. **C** compacts (second click confirms, and a percentage shows progress). **⌫** clears (second click confirms; there's no undo). **L M H XH Mx** sets the effort and the model name opens the model picker: both change Claude Code's own setting for this session only (what `/model` shows), without touching the defaults new sessions start with. Change either in `/model` or `/effort` and the bar follows. **◧** opens a side chat for a quick question that doesn't interrupt the task.
+One button each, under the prompt. **C** compacts (second click confirms, and a percentage shows progress). **⌫** clears (second click confirms; there's no undo). **L M H XH Mx** sets the effort and the model name opens the model picker: both change Claude Code's own setting (what `/model` shows), and like typing `/effort` or `/model` they also save it as the default for new sessions. Set the `keepDefaults` option to `on` to keep clicks to this session only: the mod then puts the previous default back in `~/.claude/settings.json` after each click (a change another session saves to the same keys within those seconds can be lost). Change either in `/model` or `/effort` and the bar follows. **◧** opens a side chat for a quick question that doesn't interrupt the task.
 
 ![The session bar with compact, clear, color, model and effort](img/bar-after.png)
 

@@ -108,11 +108,13 @@ const anotar = ($: EngineInterface, texto: string): Promise<void> => {
   return cola
 }
 
-// /model <id> y /effort <nivel> guardan lo elegido como default de las sesiones nuevas, y la
-// barra cambia solo esta sesión: así una sesión nueva que parta después (un agente en segundo
+// /model <id> y /effort <nivel> guardan lo elegido como default de las sesiones nuevas. Con
+// `keepDefaults` en "on" la barra cambia solo esta sesión: así una sesión nueva que parta después (un agente en segundo
 // plano, un claude -p de un script) no hereda el clic. Justo antes de que corra el comando del
 // clic se anotan estas claves del settings.json del usuario; cuando el comando deja su salida
 // (ya guardó), se devuelven a como estaban.
+// Solo con la opción `keepDefaults` en "on": escribir el settings.json de otra persona no va por defecto.
+let conservarDefault = false
 const CLAVES_DEFAULT = ['model', 'effortLevel', 'modelSettings'] as const
 type FotoDefault = { ruta: string; claves: Record<string, unknown> }
 // En $.state por lo mismo que modeloClic: el aviso "Switch model?" puede quedar abierto un rato.
@@ -371,6 +373,7 @@ export const register: Register = (on, opciones) => {
   opcionIdioma = opciones?.language
   persona = typeof opciones?.persona === 'string' ? opciones.persona.trim() : ''
   fijos = leerFijos(opciones?.folderColors)
+  conservarDefault = opciones?.keepDefaults === 'on'
   on('session.start', async ($, e, next) => {
     activo = e.isInteractive
     await elegirIdioma($)
@@ -486,7 +489,7 @@ export const register: Register = (on, opciones) => {
   // /effort, escrito o desde la barra: la barra queda en lo que Claude Code dice que dejó
   // ("Kept effort level as …" si se canceló el aviso de caché).
   on('command.run', { command: 'effort' }, async ($, e, next) => {
-    const foto = delClic(e.origin) ? await fotografiarDefault($).catch(() => null) : null
+    const foto = conservarDefault && delClic(e.origin) ? await fotografiarDefault($).catch(() => null) : null
     if (foto !== null) await update($, fotoDefaultAtom, () => foto)
     const r = await next(e)
     // Respaldo, pasados los 5 s en que Claude Code ignora cambios ajenos al archivo: el default
@@ -502,7 +505,7 @@ export const register: Register = (on, opciones) => {
   // /model, escrito o desde el desplegable. Lo que deja el panel (modelo y effort) llega después
   // por session.append; aquí solo se relee por si el cambio ya ocurrió.
   on('command.run', { command: 'model' }, async ($, e, next) => {
-    const foto = delClic(e.origin) ? await fotografiarDefault($).catch(() => null) : null
+    const foto = conservarDefault && delClic(e.origin) ? await fotografiarDefault($).catch(() => null) : null
     if (foto !== null) await update($, fotoDefaultAtom, () => foto)
     const r = await next(e)
     // Respaldo, pasados los 5 s en que Claude Code ignora cambios ajenos al archivo: el default
