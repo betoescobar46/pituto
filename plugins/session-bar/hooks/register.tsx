@@ -756,18 +756,18 @@ export const register: Register = (on, opciones) => {
 
     return (
       <Box flexDirection="column">
-        <Box>
-          {linea}
+        <Box flexWrap="wrap">
+          {linea ? <Box flexShrink={0}>{linea}</Box> : null}
           {col ? (
-            <Box marginLeft={linea ? 3 : 0}>
-              <Text color={col.ink} bold>
+            <Box marginLeft={linea ? 3 : 0} flexShrink={1}>
+              <Text color={col.ink} bold wrap="truncate-end">
                 {carpeta(await $.session.cwd().catch(() => ''))}
               </Text>
             </Box>
           ) : null}
           {etiquetaModelo && (med.contexto !== null || med.limite !== null) ? (
             /* Corchetes tenues: es un dato, no un botón (los botones se encienden al pasar el mouse). */
-            <Box marginLeft={2}>
+            <Box marginLeft={2} flexShrink={0}>
               <Text>
                 <Text dimColor>[</Text>
                 {med.contexto !== null ? <Text color={colorContexto(med.contexto)}>{`${med.contexto}%`}</Text> : null}
@@ -777,20 +777,20 @@ export const register: Register = (on, opciones) => {
               </Text>
             </Box>
           ) : null}
-          <Box marginLeft={2}>
+          <Box marginLeft={2} flexShrink={1} flexWrap="wrap">
             <Box marginRight={2}>
               <Text dimColor>│</Text>
             </Box>
             {/* Lo atiende el mod inline-replies (ui.press en quote-selection): cita en el prompt lo que
                 marcaste con el mouse. */}
             {conDialogo === undefined ? null : (
-              <Box marginRight={1}>
-                <Box backgroundColor={TECLA} paddingX={1}><Button key="quote-selection" hover={{ ...ENCENDIDO, scope: "quote-selection" }} label="❝+" plain onPress={() => {}} /></Box>
+              <Box marginRight={1} flexShrink={0}>
+                <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button key="quote-selection" hover={{ ...ENCENDIDO, scope: "quote-selection" }} label="❝+" plain onPress={() => {}} /></Box>
               </Box>
             )}
-            <Box backgroundColor={TECLA} paddingX={1}><Button key="toggle-lateral" hover={{ ...ENCENDIDO, scope: "toggle-lateral" }} label={on_ ? '◨' : nuevo ? '◧•' : '◧'} plain dimColor={!on_ && !nuevo} onPress={() => {}} /></Box>
-            <Box marginLeft={1}>
-              <Box backgroundColor={TECLA} paddingX={1}><Button
+            <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button key="toggle-lateral" hover={{ ...ENCENDIDO, scope: "toggle-lateral" }} label={on_ ? '◨' : nuevo ? '◧•' : '◧'} plain dimColor={!on_ && !nuevo} onPress={() => {}} /></Box>
+            <Box marginLeft={1} flexShrink={0}>
+              <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button
                 key="compactar"
                 hover={{ ...ENCENDIDO, scope: "compactar" }}
                 label={pct !== null ? t().botonCompactar.avance(pct) : fase === 'confirmar' ? t().botonCompactar.confirmar : fase === 'compactando' ? t().botonCompactar.compactando : 'C'}
@@ -799,8 +799,8 @@ export const register: Register = (on, opciones) => {
                 onPress={() => {}}
               /></Box>
             </Box>
-            <Box marginLeft={1}>
-              <Box backgroundColor={TECLA} paddingX={1}><Button
+            <Box marginLeft={1} flexShrink={0}>
+              <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button
                 key="borrar"
                 hover={{ ...ENCENDIDO, scope: "borrar" }}
                 label={faseBorrar === 'confirmar' ? t().botonBorrar.confirmar : faseBorrar === 'borrando' ? t().botonBorrar.borrando : '⌫'}
@@ -809,7 +809,7 @@ export const register: Register = (on, opciones) => {
                 onPress={() => {}}
               /></Box>
             </Box>
-            <Box marginLeft={1}>
+            <Box marginLeft={1} flexShrink={0}>
               {/* Button no admite color propio: el emoji de la marca ya trae el suyo. */}
               <Box><Button key="color" hover={{ ...ENCENDIDO, scope: "color" }} label={col ? col.marca : '○'} plain dimColor={!col} onPress={() => {}} /></Box>
             </Box>
