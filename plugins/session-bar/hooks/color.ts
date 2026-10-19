@@ -1,18 +1,19 @@
 // Color por sesión: los nombres son los que acepta el /color de Claude Code (la barra del
 // prompt), y cada uno lleva su color para el panel y una marca para el título de la pestaña
 // de cmux. `tinte` ya no tiñe la terminal (ver scriptAplicar): solo el fondo de tus mensajes.
+// `claro` trae el tinte (y la tinta, si la oscura no se lee) para una terminal de fondo claro.
 
-export type ColorSesion = { id: string; nombre: string; ink: string; tinte: string; marca: string }
+export type ColorSesion = { id: string; nombre: string; ink: string; tinte: string; marca: string; claro: { tinte: string; ink?: string } }
 
 export const PALETA: readonly ColorSesion[] = [
-  { id: 'red', nombre: 'rojo', ink: 'red', tinte: '#3a2b30', marca: '🔴' },
-  { id: 'green', nombre: 'verde', ink: 'green', tinte: '#2a362f', marca: '🟢' },
-  { id: 'blue', nombre: 'azul', ink: 'blue', tinte: '#2a3242', marca: '🔵' },
-  { id: 'yellow', nombre: 'amarillo', ink: 'yellow', tinte: '#37352a', marca: '🟡' },
-  { id: 'purple', nombre: 'morado', ink: 'magenta', tinte: '#342c40', marca: '🟣' },
-  { id: 'orange', nombre: 'naranjo', ink: '#e8833a', tinte: '#3a3029', marca: '🟠' },
-  { id: 'pink', nombre: 'rosado', ink: '#e86fa8', tinte: '#3a2c37', marca: '🩷' },
-  { id: 'cyan', nombre: 'calipso', ink: 'cyan', tinte: '#29373a', marca: '🩵' },
+  { id: 'red', nombre: 'rojo', ink: 'red', tinte: '#3a2b30', marca: '🔴', claro: { tinte: '#f7e4e7' } },
+  { id: 'green', nombre: 'verde', ink: 'green', tinte: '#2a362f', marca: '🟢', claro: { tinte: '#e1f2e6' } },
+  { id: 'blue', nombre: 'azul', ink: 'blue', tinte: '#2a3242', marca: '🔵', claro: { tinte: '#e3e9f7' } },
+  { id: 'yellow', nombre: 'amarillo', ink: 'yellow', tinte: '#37352a', marca: '🟡', claro: { tinte: '#f5f0d6' } },
+  { id: 'purple', nombre: 'morado', ink: 'magenta', tinte: '#342c40', marca: '🟣', claro: { tinte: '#ede4f6' } },
+  { id: 'orange', nombre: 'naranjo', ink: '#e8833a', tinte: '#3a3029', marca: '🟠', claro: { tinte: '#f9e9db', ink: '#b85a14' } },
+  { id: 'pink', nombre: 'rosado', ink: '#e86fa8', tinte: '#3a2c37', marca: '🩷', claro: { tinte: '#f8e3ef', ink: '#b83d78' } },
+  { id: 'cyan', nombre: 'calipso', ink: 'cyan', tinte: '#29373a', marca: '🩵', claro: { tinte: '#ddf1f4' } },
 ]
 
 // Índice -1 = sin color (todo vuelve a lo normal).

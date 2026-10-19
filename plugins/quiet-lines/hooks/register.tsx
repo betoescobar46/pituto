@@ -4,11 +4,13 @@ import { atom, read, update } from 'claude-code'
 
 import { cierrePorDuracion, cierreVivo, duracion, hhmm, leerCierres, resumen } from './lineas'
 import type { Cierres } from './lineas'
+import { tema, vigilarTema } from './tema'
 
 // Las líneas secundarias del transcript (el resumen de herramientas y el
 // cierre del turno) en cursiva tenue, para que resalte la respuesta.
 // Más oscuro que el gris tenue del motor, para que se note la diferencia.
-const GRIS = '#4b5263'
+// Con la terminal clara, un gris medio (el oscuro casi no se distingue del texto normal).
+const GRIS = { oscuro: '#4b5263', claro: '#9aa0a8' } as const
 const TRANSCRIPT = { plugin: 'quiet-lines', key: 'transcript' } as const
 // Los cierres de esta sesión, anotados al terminar cada turno; leerlos al dibujar hace que la línea
 // se redibuje con su hora cuando el turno termina después de dibujarse.
@@ -33,6 +35,11 @@ export const register: Register = on => {
     return next(e)
   })
 
+  on('session.start', async ($, e, next) => {
+    if (e.isInteractive) vigilarTema($)
+    return next(e)
+  })
+
   on('classic.SessionStart', async ($, e, next) => {
     const { value } = await $.state.get(TRANSCRIPT)
     if (e.transcript_path && value !== e.transcript_path) await $.state.set(TRANSCRIPT, e.transcript_path)
@@ -48,7 +55,7 @@ export const register: Register = on => {
     // Mientras corre o desplegado, el motor dibuja lo suyo.
     if (e.props.isActive || e.props.isExpanded || !e.props.calls.length) return next(e)
     const { Box, Text } = $.ui.resolve(e)
-    return <Box marginTop={1} paddingLeft={2}><Text italic color={GRIS}>{resumen(e.props.calls)}</Text></Box>
+    return <Box marginTop={1} paddingLeft={2}><Text italic color={GRIS[tema()]}>{resumen(e.props.calls)}</Text></Box>
   })
 
   on('ui.render', { component: 'TurnDuration' }, async ($, e, next) => {
@@ -77,6 +84,6 @@ export const register: Register = on => {
     }
     const hora = ms === undefined ? '' : ` · done ${hhmm(ms)}`
     const { Box, Text } = $.ui.resolve(e)
-    return <Box marginTop={1}><Text italic color={GRIS}>{`✻ ${word} for ${duracion(durationMs)}${hora}`}</Text></Box>
+    return <Box marginTop={1}><Text italic color={GRIS[tema()]}>{`✻ ${word} for ${duracion(durationMs)}${hora}`}</Text></Box>
   })
 }

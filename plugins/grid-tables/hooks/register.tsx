@@ -1,13 +1,15 @@
 import type { Register } from 'claude-code'
 
 import { grillaLineas, segmentar } from './grilla'
+import { tema, vigilarTema } from './tema'
 
 // Colores de la grilla. Cualquier hex sirve.
-const COLOR = {
-  borde: '#D19A66',
-  cabecera: '#E5C07B',
-  celda: undefined as string | undefined, // el color normal del terminal
-}
+// Con la terminal clara, tonos más oscuros: el amarillo se pierde sobre el blanco.
+const COLORES = {
+  oscuro: { borde: '#D19A66', cabecera: '#E5C07B' },
+  claro: { borde: '#b5733a', cabecera: '#8a5a00' },
+} as const
+const COLOR = (): Record<string, string | undefined> => ({ ...COLORES[tema()], celda: undefined }) // celda: el color normal del terminal
 
 // Columnas que se reservan: la viñeta "● " del transcript más un margen
 // para que la grilla no toque el borde ni el panel lateral.
@@ -17,6 +19,11 @@ export const register: Register = on => {
   // Ancho de la columna del transcript. Solo la banda sobre el prompt lo
   // conoce (bodyColumns se angosta cuando hay un panel acoplado al lado).
   let anchoTranscript: number | undefined
+
+  on('session.start', async ($, e, next) => {
+    if (e.isInteractive) vigilarTema($)
+    return next(e)
+  })
 
   on('ui.render', { component: 'AbovePrompt' }, ($, e, next) => {
     const ancho = e.props.bodyColumns
@@ -53,7 +60,7 @@ export const register: Register = on => {
                 {grillaLineas(s.filas, ancho).map((linea, k) => (
                   <Text key={`t${n}l${k}`} wrap="truncate">
                     {linea.map((trozo, j) => (
-                      <Text key={`t${n}l${k}s${j}`} color={COLOR[trozo.tipo]} bold={trozo.tipo === 'cabecera'}>
+                      <Text key={`t${n}l${k}s${j}`} color={COLOR()[trozo.tipo]} bold={trozo.tipo === 'cabecera'}>
                         {trozo.t}
                       </Text>
                     ))}

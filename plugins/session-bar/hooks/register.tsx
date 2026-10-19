@@ -3,7 +3,7 @@ import type { EngineInterface, ModelForkResult, Register } from 'claude-code'
 
 import type { Mensaje, Modo } from '../types'
 import { PALETA, SIN_COLOR, carpeta, colorPorCarpeta, leerFijos, scriptAplicar, siguiente } from './color'
-import type { Fijo } from './color'
+import type { ColorSesion, Fijo } from './color'
 import { LETRA, NIVELES, esNivel, nivelDeArgs, nivelDeSalida, nivelDeSettings } from './effort'
 import type { Nivel } from './effort'
 import { motivoBloqueo } from './guardia'
@@ -13,6 +13,7 @@ import { MODELOS, mismoModelo, modeloPedido } from './modelo'
 import { RITMO_INICIAL, esperado, nuevoRitmo, porcentaje } from './avance'
 import { idiomaDe, textos } from './idioma'
 import type { Idioma } from './idioma'
+import { tema, vigilarTema } from './tema'
 
 const PANE = 'session-bar'
 const VISIBLES = 6
@@ -41,8 +42,19 @@ const esfuerzo = atom({ plugin: 'session-bar', key: 'esfuerzo' } as const, null 
 // La barra de effort muestra solo el nivel actual hasta que se despliega.
 // Cómo se enciende un botón de la barra bajo el mouse: así se distingue de los datos.
 // Fondo de tecla: marca en reposo lo que se puede clicar, sin corchetes.
-const TECLA = '#363b44'
-const ENCENDIDO = { color: 'cyanBright', bold: true, underline: true } as const
+// Cada color fijo tiene su par para terminal clara (tema.ts): la tecla gris oscura con letra
+// oscura no se lee sobre fondo blanco.
+const COLORES = {
+  oscuro: { tecla: '#363b44', encendido: 'cyanBright', fuerte: 'whiteBright', texto: 'whiteBright' },
+  claro: { tecla: '#dde1e6', encendido: '#0b6f9e', fuerte: '#000000', texto: '#000000' },
+} as const
+const col_ = () => COLORES[tema()]
+const encendido = () => ({ color: col_().encendido, bold: true, underline: true }) as const
+const tinteDe = (c: ColorSesion) => (tema() === 'claro' ? c.claro.tinte : c.tinte)
+// Los colores vivos del medidor salen pálidos sobre fondo blanco.
+const OSCURECIDO: Record<string, string> = { greenBright: '#1a7f37', yellowBright: '#9a6700', redBright: '#cf222e', '#ff8c3a': '#bc4c00' }
+const legible = (color: string) => (tema() === 'claro' ? (OSCURECIDO[color] ?? color) : color)
+const inkDe = (c: ColorSesion) => (tema() === 'claro' ? (c.claro.ink ?? c.ink) : c.ink)
 const menuModelo = atom({ plugin: 'session-bar', key: 'menuModelo' } as const, false)
 // Lo que antes mostraba la status line: modelo abreviado, % de contexto y % del límite de 5 h.
 const medida = atom({ plugin: 'session-bar', key: 'medida' } as const, { modelo: '', contexto: null, limite: null } as Medida)
@@ -403,6 +415,7 @@ export const register: Register = (on, opciones) => {
       })().catch((err: unknown) => anotar($, `effort ${String(err)}`))
     })
     $.clock.after(0, () => void medir($).catch((err: unknown) => anotar($, `medida ${String(err)}`)))
+    vigilarTema($)
     await anotar($, `session.start ${JSON.stringify(e).slice(0, 120)}`)
     // session.start también corre en cada recarga del mod: se rehace lo que vivía en memoria.
     const panes = await $.ui.panes().catch(() => [])
@@ -648,19 +661,19 @@ export const register: Register = (on, opciones) => {
     const { Box, Text } = $.ui.resolve(e)
     return (
       <Box marginTop={1}>
-        <Box flexGrow={1} backgroundColor={c.tinte}>
-          <Box flexDirection="column" backgroundColor={c.tinte}>
+        <Box flexGrow={1} backgroundColor={tinteDe(c)}>
+          <Box flexDirection="column" backgroundColor={tinteDe(c)}>
             {e.props.text.split('\n').map((_, k) => (
-              <Text key={k} backgroundColor={c.tinte}>
-                <Text color={c.ink} bold>
+              <Text key={k} backgroundColor={tinteDe(c)}>
+                <Text color={inkDe(c)} bold>
                   {'▌ '}
                 </Text>
                 <Text dimColor>{k === 0 ? '❯ ' : '  '}</Text>
               </Text>
             ))}
           </Box>
-          <Box flexGrow={1} backgroundColor={c.tinte}>
-            <Text color="whiteBright" backgroundColor={c.tinte}>
+          <Box flexGrow={1} backgroundColor={tinteDe(c)}>
+            <Text color={col_().texto} backgroundColor={tinteDe(c)}>
               {e.props.text}
             </Text>
           </Box>
@@ -760,7 +773,7 @@ export const register: Register = (on, opciones) => {
           {linea ? <Box flexShrink={0}>{linea}</Box> : null}
           {col ? (
             <Box marginLeft={linea ? 3 : 0} flexShrink={1}>
-              <Text color={col.ink} bold wrap="truncate-end">
+              <Text color={inkDe(col)} bold wrap="truncate-end">
                 {carpeta(await $.session.cwd().catch(() => ''))}
               </Text>
             </Box>
@@ -770,9 +783,9 @@ export const register: Register = (on, opciones) => {
             <Box marginLeft={2} flexShrink={0}>
               <Text>
                 <Text dimColor>[</Text>
-                {med.contexto !== null ? <Text color={colorContexto(med.contexto)}>{`${med.contexto}%`}</Text> : null}
+                {med.contexto !== null ? <Text color={legible(colorContexto(med.contexto))}>{`${med.contexto}%`}</Text> : null}
                 {med.limite !== null && med.contexto !== null ? <Text dimColor>/</Text> : null}
-                {med.limite !== null ? <Text color={colorLimite(med.limite)}>{`${med.limite}%`}</Text> : null}
+                {med.limite !== null ? <Text color={legible(colorLimite(med.limite))}>{`${med.limite}%`}</Text> : null}
                 <Text dimColor>]</Text>
               </Text>
             </Box>
@@ -785,14 +798,14 @@ export const register: Register = (on, opciones) => {
                 marcaste con el mouse. */}
             {conDialogo === undefined ? null : (
               <Box marginRight={1} flexShrink={0}>
-                <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button key="quote-selection" hover={{ ...ENCENDIDO, scope: "quote-selection" }} label="❝+" plain onPress={() => {}} /></Box>
+                <Box backgroundColor={col_().tecla} paddingX={1} flexShrink={0}><Button key="quote-selection" hover={{ ...encendido(), scope: "quote-selection" }} label="❝+" plain onPress={() => {}} /></Box>
               </Box>
             )}
-            <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button key="toggle-lateral" hover={{ ...ENCENDIDO, scope: "toggle-lateral" }} label={on_ ? '◨' : nuevo ? '◧•' : '◧'} plain dimColor={!on_ && !nuevo} onPress={() => {}} /></Box>
+            <Box backgroundColor={col_().tecla} paddingX={1} flexShrink={0}><Button key="toggle-lateral" hover={{ ...encendido(), scope: "toggle-lateral" }} label={on_ ? '◨' : nuevo ? '◧•' : '◧'} plain dimColor={!on_ && !nuevo} onPress={() => {}} /></Box>
             <Box marginLeft={1} flexShrink={0}>
-              <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button
+              <Box backgroundColor={col_().tecla} paddingX={1} flexShrink={0}><Button
                 key="compactar"
-                hover={{ ...ENCENDIDO, scope: "compactar" }}
+                hover={{ ...encendido(), scope: "compactar" }}
                 label={pct !== null ? t().botonCompactar.avance(pct) : fase === 'confirmar' ? t().botonCompactar.confirmar : fase === 'compactando' ? t().botonCompactar.compactando : 'C'}
                 plain
                 dimColor={fase === 'listo' && pct === null}
@@ -800,9 +813,9 @@ export const register: Register = (on, opciones) => {
               /></Box>
             </Box>
             <Box marginLeft={1} flexShrink={0}>
-              <Box backgroundColor={TECLA} paddingX={1} flexShrink={0}><Button
+              <Box backgroundColor={col_().tecla} paddingX={1} flexShrink={0}><Button
                 key="borrar"
-                hover={{ ...ENCENDIDO, scope: "borrar" }}
+                hover={{ ...encendido(), scope: "borrar" }}
                 label={faseBorrar === 'confirmar' ? t().botonBorrar.confirmar : faseBorrar === 'borrando' ? t().botonBorrar.borrando : '⌫'}
                 plain
                 dimColor={faseBorrar === 'listo'}
@@ -811,7 +824,7 @@ export const register: Register = (on, opciones) => {
             </Box>
             <Box marginLeft={1} flexShrink={0}>
               {/* Button no admite color propio: el emoji de la marca ya trae el suyo. */}
-              <Box><Button key="color" hover={{ ...ENCENDIDO, scope: "color" }} label={col ? col.marca : '○'} plain dimColor={!col} onPress={() => {}} /></Box>
+              <Box><Button key="color" hover={{ ...encendido(), scope: "color" }} label={col ? col.marca : '○'} plain dimColor={!col} onPress={() => {}} /></Box>
             </Box>
           </Box>
         </Box>
@@ -822,17 +835,17 @@ export const register: Register = (on, opciones) => {
           {etiquetaModelo ? (
             <Box marginRight={2}>
               {/* Button no admite color: el modelo pierde el cian, pero se despliega con un clic. */}
-              <Box backgroundColor={TECLA} paddingX={1}><Button key="modelo" hover={{ ...ENCENDIDO, scope: "modelo" }} label={`${etiquetaModelo} ${menu ? '▸' : '▾'}`} plain onPress={() => {}} /></Box>
+              <Box backgroundColor={col_().tecla} paddingX={1}><Button key="modelo" hover={{ ...encendido(), scope: "modelo" }} label={`${etiquetaModelo} ${menu ? '▸' : '▾'}`} plain onPress={() => {}} /></Box>
               {/* Desplegable de modelo, a la derecha del botón: el actual en negrita, los demás apagados. */}
               {menu
                 ? MODELOS.map(m => (
                     <Box key={`modelo-${m}`} marginLeft={2}>
                       {mismoModelo(base, m) ? (
-                        <Text color="cyanBright" bold>
+                        <Text color={col_().encendido} bold>
                           {modeloCorto(m)}
                         </Text>
                       ) : (
-                        <Button key={`modelo-${m}`} hover={{ ...ENCENDIDO, scope: `modelo-${m}` }} label={modeloCorto(m)} plain dimColor onPress={() => {}} />
+                        <Button key={`modelo-${m}`} hover={{ ...encendido(), scope: `modelo-${m}` }} label={modeloCorto(m)} plain dimColor onPress={() => {}} />
                       )}
                     </Box>
                   ))
@@ -842,11 +855,11 @@ export const register: Register = (on, opciones) => {
           {NIVELES.map((n, i) => (
             <Box key={`effort-${n}`} marginLeft={i === 0 ? 0 : 1}>
               {n === ef ? (
-                <Text color="whiteBright" bold>
+                <Text color={col_().fuerte} bold>
                   {LETRA[n]}
                 </Text>
               ) : (
-                <Button key={`effort-${n}`} hover={{ ...ENCENDIDO, scope: `effort-${n}` }} label={LETRA[n]} plain dimColor onPress={() => {}} />
+                <Button key={`effort-${n}`} hover={{ ...encendido(), scope: `effort-${n}` }} label={LETRA[n]} plain dimColor onPress={() => {}} />
               )}
             </Box>
           ))}

@@ -22,6 +22,7 @@ import {
   preguntasDe,
   quitarLinea,
 } from './texto'
+import { tema, vigilarTema } from './tema'
 
 const preguntas = atom({ plugin: 'inline-replies', key: 'preguntas' } as const, [] as string[])
 const citas = atom({ plugin: 'inline-replies', key: 'citas' } as const, [] as Cita[])
@@ -122,8 +123,7 @@ async function asegurar($: EngineInterface) {
 let conPantalla = true
 
 // Las teclas de las alternativas, del mismo gris que los botones de la barra de session-bar.
-const TECLA = '#363b44'
-const TECLA_REC = '#4a5263'
+const TECLAS = { oscuro: { tecla: '#363b44', rec: '#4a5263' }, claro: { tecla: '#dde1e6', rec: '#c5ccd5' } } as const
 
 export const register: Register = (on, opciones) => {
   opcionIdioma = opciones?.language
@@ -131,6 +131,7 @@ export const register: Register = (on, opciones) => {
   on('session.start', async ($, e, next) => {
     conPantalla = e.isInteractive
     await elegirIdioma($)
+    if (conPantalla) vigilarTema($)
     if (conPantalla) await asegurar($)
     return next(e)
   })
@@ -254,7 +255,7 @@ export const register: Register = (on, opciones) => {
                     const href = enlaceOpcion(q.i, j)
                     const rec = j === q.defecto
                     return (
-                      <Box key={`t${q.i}-${j}`} backgroundColor={rec ? TECLA_REC : TECLA} paddingX={1} marginRight={1}>
+                      <Box key={`t${q.i}-${j}`} backgroundColor={rec ? TECLAS[tema()].rec : TECLAS[tema()].tecla} paddingX={1} marginRight={1}>
                         <Markdown
                           key={`tm${q.i}-${j}`}
                           text={`[${rec ? '★ ' : ''}${o.replace(/([[\]])/g, '\\$1')}](${href})`}
