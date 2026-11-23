@@ -148,7 +148,8 @@ export const register: Register = (on, opciones) => {
     return next(e)
   })
 
-  on('ui.press', { element: 'quote-selection' }, async ($, e) => {
+  // session-bar draws the button: without `plugin` the matcher only hears this plugin's own presses.
+  on('ui.press', { plugin: '*', element: 'quote-selection' }, async ($, e) => {
     await citarSeleccion($)
     return { element: e.element }
   })
